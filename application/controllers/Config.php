@@ -209,6 +209,12 @@ class Config extends Secure_Controller
 		$data['tax_category_options'] = $this->tax_lib->get_tax_category_options();
 		$data['tax_jurisdiction_options'] = $this->tax_lib->get_tax_jurisdiction_options();
 		$data['show_office_group'] = $this->Module->get_show_office_group();
+		$use_alternate_currency = $this->config->item('use_alternate_currency');
+		$number_locale_alt = $this->config->item('number_locale_alt');
+		$currency_symbol_alt = $this->config->item('currency_symbol_alt');
+		$data['exchange_rate_set'] = array('use_alternate_currency' => $use_alternate_currency,
+		'exchange_rate' => 1.0, 'number_locale_alt' =>$number_locale_alt, 'currency_symbol_alt' => $currency_symbol_alt);
+
 
 		$data = $this->xss_clean($data);
 
@@ -315,12 +321,33 @@ class Config extends Secure_Controller
 		{
 			$fmt->setAttribute(\NumberFormatter::GROUPING_SEPARATOR_SYMBOL, '');
 		}
+
 		$fmt->setSymbol(\NumberFormatter::CURRENCY_SYMBOL, $currency_symbol);
 		$number_local_example = $fmt->format(1234567890.12300);
 		echo json_encode(array(
 			'success' => $number_local_example != FALSE,
 			'number_locale_example' => $number_local_example,
 			'currency_symbol' => $currency_symbol,
+			'thousands_separator' => $fmt->getAttribute(\NumberFormatter::GROUPING_SEPARATOR_SYMBOL) != ''
+		));
+	}
+
+	public function ajax_check_number_locale_alt()
+	{
+		$number_locale_alt = $this->input->post('number_locale_alt');
+		$fmt = new \NumberFormatter($number_locale_alt, \NumberFormatter::CURRENCY);
+		$currency_symbol_alt = empty($this->input->post('currency_symbol_alt')) ? $fmt->getSymbol(\NumberFormatter::CURRENCY_SYMBOL) : $this->input->post('currency_symbol_alt');
+		if($this->input->post('thousands_separator') == 'false')
+		{
+			$fmt->setAttribute(\NumberFormatter::GROUPING_SEPARATOR_SYMBOL, '');
+		}
+		$fmt->setSymbol(\NumberFormatter::CURRENCY_SYMBOL, $currency_symbol_alt);
+		$number_local_example_alt = $fmt->format(1234567890.12300);
+
+		echo json_encode(array(
+			'success' => $number_local_example_alt != FALSE,
+			'number_locale_example_alt' => $number_local_example_alt,
+			'currency_symbol_alt' => $currency_symbol_alt,
 			'thousands_separator' => $fmt->getAttribute(\NumberFormatter::GROUPING_SEPARATOR_SYMBOL) != ''
 		));
 	}
@@ -335,7 +362,7 @@ class Config extends Secure_Controller
 			'timezone' => $this->input->post('timezone'),
 			'dateformat' => $this->input->post('dateformat'),
 			'timeformat' => $this->input->post('timeformat'),
-			'thousands_separator' => $this->input->post('thousands_separator'),
+			'thousands_separator' => $this->input->post('thousands_separator') == 'thousands_separator' ? 'thousands_separator' : '',
 			'number_locale' => $this->input->post('number_locale'),
 			'currency_decimals' => $this->input->post('currency_decimals'),
 			'tax_decimals' => $this->input->post('tax_decimals'),
@@ -345,7 +372,10 @@ class Config extends Secure_Controller
 			'date_or_time_format' => $this->input->post('date_or_time_format'),
 			'cash_decimals' => $this->input->post('cash_decimals'),
 			'cash_rounding_code' => $this->input->post('cash_rounding_code'),
-			'financial_year' => $this->input->post('financial_year')
+			'financial_year' => $this->input->post('financial_year'),
+			'use_alternate_currency' => $this->input->post('use_alternate_currency') != NULL,
+			'number_locale_alt' => $this->input->post('number_locale_alt'),
+			'currency_symbol_alt' => $this->input->post('currency_symbol_alt')
 		);
 
 		$result = $this->Appconfig->batch_save($batch_save_data);
